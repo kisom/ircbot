@@ -6,6 +6,7 @@ import time
 
 conf_fn     = './config'
 config      = { }
+irc         = None
 
 def load_config(config_file):
     try:
@@ -78,7 +79,26 @@ def connect():
         irc.send( irc_send(['JOIN', channel]) )
         irc_send( irc_send(['PRIVMSG', channel, ':hey guys']) )
     
+    irc.setblocking(0)
 
 def run():
+    load_config(conf_fn)
+    connect()
     while True:
-        time.sleep(1)
+        try:
+            data = irc.recv(4096)
+            if data: print data
+            basic_console()
+        except KeyboardInterrupt:
+            irc.close()
+    
+def basic_console():
+    line  = raw_input('>')
+    
+    data  = '%s\r\n' % line
+    irc.send(data)
+    
+    data = irc.recv(4096)
+    if data: print data
+
+
