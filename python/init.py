@@ -78,8 +78,10 @@ def connect():
     irc.send( irc_send(['USER', config['user'], config['myhost'],
                         config['sname'], config['realname']] ))
     for channel in config['channels']:              # join channels
+        time.sleep(0.3)
+        print "joining channel %s" % channel
         irc.send( irc_send(['JOIN', channel]) )
-        irc_send( irc_send(['PRIVMSG', channel, ':hey guys']) )
+        #irc_send( irc_send(['PRIVMSG', channel, ':hey guys']) )
     
     irc.setblocking(0)
     
