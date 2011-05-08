@@ -17,7 +17,7 @@ def load_config(config_file):
             if len(strip.split(':')) < 2: continue  # ensure valid configs
             key, value = strip.split(':', 1)        # allow colons in values
 
-            config[key] = value                     # load value to hash
+            config[key] = value.strip()             # load value to hash
 
     except IOError, e:
         print str(e)
