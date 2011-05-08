@@ -2,6 +2,7 @@
 
 import socket
 import sys
+import time
 
 conf_fn     = './config'
 config      = { }
@@ -77,3 +78,7 @@ def connect():
         irc.send( irc_send(['JOIN', channel]) )
         irc_send( irc_send(['PRIVMSG', channel, ':hey guys']) )
     
+
+def run():
+    while True:
+        time.sleep(1)
