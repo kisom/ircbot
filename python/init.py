@@ -35,8 +35,12 @@ def connect():
         return False
     if not 'server' in config:
         return False
+    
+    # port requires special handling
     if not 'port' in config:
         config['port'] = 6667
+    else:
+        config['port'] = int(config['port'])
         
     # load defaults for missing config data
     if not 'user' in config:
