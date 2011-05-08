@@ -107,4 +107,8 @@ if __name__ == '__main__':
             basic_console()
         except KeyboardInterrupt:
             irc.close()
+        except socket.error, e:
+            if e.errno == 11:
+                pass
+            
     
