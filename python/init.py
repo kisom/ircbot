@@ -83,17 +83,6 @@ def connect():
     
     return irc
 
-def run():
-    load_config(conf_fn)
-    irc = connect()
-    while True:
-        try:
-            data = irc.recv(4096)
-            if data: print data
-            basic_console()
-        except KeyboardInterrupt:
-            irc.close()
-    
 def basic_console():
     line  = raw_input('>')
     
@@ -104,3 +93,14 @@ def basic_console():
     if data: print data
 
 
+if __name__ == '__main__':
+    load_config(conf_fn)
+    irc = connect()
+    while True:
+        try:
+            data = irc.recv(4096)
+            if data: print data
+            basic_console()
+        except KeyboardInterrupt:
+            irc.close()
+    
