@@ -6,7 +6,7 @@ import time
 
 conf_fn     = './config'
 config      = { }
-irc         = None
+irc         = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
 
 def load_config(config_file):
     try:
@@ -61,7 +61,6 @@ def connect():
         config['channels'] = config['channels'].split(' ')
         
     try:
-        irc = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
         irc.settimeout(3)
         
         irc.connect( (config['server'], config['port']))
@@ -87,6 +86,7 @@ def connect():
     return irc
 
 def basic_console():
+    irc.setblocking(1)
     line  = raw_input('>')
     
     data  = '%s\r\n' % line
@@ -94,6 +94,7 @@ def basic_console():
     
     data = irc.recv(4096)
     if data: print data
+    irc.setblocking(0)
 
 
 if __name__ == '__main__':
