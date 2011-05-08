@@ -1,0 +1,7 @@
+# config for IRC bot
+
+nick: orgasmo4000
+myhost: blueant.brokenlcd.net
+sname: blueant
+realname: :Eric Cartman
+channels: #devious
