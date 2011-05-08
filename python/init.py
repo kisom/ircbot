@@ -34,8 +34,10 @@ def irc_send(message):
 def connect():
     # fail if we're missing critical config data
     if not 'user' in config:
+        print 'missing user!'
         return False
     if not 'server' in config:
+        print 'missing server!'
         return False
     
     # port requires special handling
@@ -65,6 +67,7 @@ def connect():
         irc.connect( (config['server'], config['port']))
     
     except socket.timeout:
+        print 'socket timeout!'
         return False
     except TypeError:
         print 'server must be string and port must be an integer!'
