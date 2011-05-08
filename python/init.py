@@ -80,10 +80,12 @@ def connect():
         irc_send( irc_send(['PRIVMSG', channel, ':hey guys']) )
     
     irc.setblocking(0)
+    
+    return irc
 
 def run():
     load_config(conf_fn)
-    connect()
+    irc = connect()
     while True:
         try:
             data = irc.recv(4096)
