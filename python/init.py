@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 
+import re
 import socket
 import sys
 import time
 
-conf_fn     = './config'
-config      = { }
-irc         = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
+conf_fn             = './config'
+config              = { }
+irc                 = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
+message_handlers    = None
 
 def load_config(config_file):
     try:
@@ -62,8 +64,8 @@ def connect():
         
     try:
         irc.settimeout(3)
-        
         irc.connect( (config['server'], config['port']))
+        irc.setblocking(1)
     
     except socket.timeout:
         print 'socket timeout!'
@@ -73,8 +75,12 @@ def connect():
         return False
     
     irc.recv(4096)                                  # discard server message
+    time.sleep(5)
+    print 'sending nick...'
     irc.send( irc_send(['NICK', config['nick']]) )  # send nickname
                                                     # send username
+    time.sleep(5)
+    print 'sending user...'
     irc.send( irc_send(['USER', config['user'], config['myhost'],
                         config['sname'], config['realname']] ))
     for channel in config['channels']:              # join channels
@@ -88,27 +94,77 @@ def connect():
     return irc
 
 def basic_console():
-    irc.setblocking(1)
-    line  = raw_input('>')
+    while True:
+        try:
+            irc.setblocking(1)
+            line  = raw_input('>')
     
-    data  = '%s\r\n' % line
-    irc.send(data)
+            data  = '%s\r\n' % line
+            irc.send(data)
     
-    data = irc.recv(4096)
-    if data: print data
-    irc.setblocking(0)
+            data = irc.recv(4096)
+            if data: print data
+            irc.setblocking(0)
+        except KeyboardInterrupt:
+            irc.close()
+            sys.exit(0)
+    
+
+def process_data(data):
+    if data.startswith('PING'):
+        sender      = re.sub('^PING :([\\w.]+)', '\\1', data)
+        print 'sending PONG...'
+        irc.send( irc_send(['PONG', sender]))
+    elif 'PRIVMSG' in data:
+        sender      = re.sub('^:(.+)\!.* PRIVMSG.*', '\\1', data).strip()
+        channel     = re.sub('^.* PRIVMSG ([#-_\\w]+) :.*$', '\\1', data).strip()
+        message     = re.sub('^.* PRIVMSG [#-_\\w]+ :(.+)$', '\\1', data).strip()
+        
+        
+        if channel == config['nick']:
+            print '/msg detected...'
+            channel = sender
+        
+        print 'PRIVMSG received!'
+        print '-----------------'
+        print '\tsender:', sender
+        print '\tchannel:', channel
+        print '\tmessage:', message
+        print '\n'
+        
+        if message_handlers:
+            for handler in message_handlers:
+                exec(handler)(sender, channel, message)
+        else:
+            if not config['nick'] in message:
+                print 'i\'m not being spoken to...'
+                return
+            
+            if channel.startswith('#'):
+                msg = ':%s: hello' % sender
+            else:
+                msg = ':hello'
+            
+            print 'sending %s ' % msg
+            transmit    = [ 'PRIVMSG', channel, msg]
+            print 'will send: ', irc_send(transmit)
+            irc.send(irc_send( transmit ))
+            
+            
 
 
 if __name__ == '__main__':
     load_config(conf_fn)
     irc = connect()
+    print 'running...'
     while True:
         try:
             data = irc.recv(4096)
-            if data: print data
-            basic_console()
+            if data:
+                print data
+                process_data(data)
         except KeyboardInterrupt:
-            irc.close()
+            basic_console()
         except socket.error, e:
             if e.errno == 11:
                 pass
