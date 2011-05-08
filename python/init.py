@@ -31,23 +31,23 @@ def irc_send(message):
 
 def connect():
     # fail if we're missing critical config data
-    if not config['user']:
+    if not 'user' in config:
         return False
-    if not config['server']:
+    if not 'server' in config:
         return False
-    if not config['port']:
+    if not 'port' in config:
         config['port'] = 6667
         
     # load defaults for missing config data
-    if not config['nick']:
+    if not 'user' in config:
         config['nick'] = config['user']
-    if not config['myhost']:
+    if not 'myhost' in config:
         config['myhost'] = config['example.net']
-    if not config['sname']:
+    if not 'sname' in config:
         config['sname'] = config['user']
-    if not config['realname']:
+    if not 'realname' in config:
         config['realname'] = config['user']
-    if not config['channels']:
+    if not 'channels' in config:
         config['channels'] = [ '%s_master' % config['user'] ]
     else:
         config['channels'] = config['channels'].split(' ')
