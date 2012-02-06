@@ -128,6 +128,10 @@ def process_data(data):
         if channel == config['nick']:
             print '/msg detected...'
             channel = sender
+            if config['killword'] == message:
+                irc.send(irc_send(['quit']))
+                time.sleep(5)
+                sys.exit(os.EX_OK)
         
         if channel.startswith(':'):
             os._exit(os.EX_OK)
@@ -148,6 +152,7 @@ def process_data(data):
 
 if __name__ == '__main__':
     load_config(conf_fn)
+    print 'killword: "%s"' % (config['killword'])
     irc = connect()
 
     if not irc:
