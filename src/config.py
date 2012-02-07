@@ -2,7 +2,8 @@
 # author: kyle isom <coder@kyleisom.net>
 # license: ISC / public domain
 """
-Provide configuration file support for the IRC bot.
+Provide configuration file support for the IRC bot. Allows separation of
+configuration file type from the main code.`
 """
 
 
