@@ -84,8 +84,7 @@ class Irc:
         if not 0 == os.fork():
             return
 
-        print 'apply args (%s) to fun (%s)' % (args, fun)
-        command = fun(self, args)
+        command = fun(*args)
         self.slock.acquire()
         self.sock.send(command)
         self.slock.release()
@@ -124,7 +123,6 @@ class Irc:
 
     def __pong__(self, daemon):
         """Return an appropriate PING command."""
-        print '__pong__: ', daemon
         command = 'PONG %s' % (daemon, )
         return command
 
@@ -179,8 +177,9 @@ class Irc:
 
     def run(self, handler=null_handler):
         """Kick of the run loop. Will run until a socket error crops up."""
-        time.sleep(4)
         while True:
+            sys.stdout.flush()
+            sys.stderr.flush()
             try:
                 data = self.syncread()
             except socket.error as err:
@@ -194,12 +193,9 @@ class Irc:
                 break
             except Exception as err:
                 sys.stderr.write('Exception: %s\n' % (err, ))
-            print data
-            if (data.startswith('PING')):
-                print 'top: ping'
+            if data.startswith('PING'):
                 daemon = re.sub('^PING :([\\w.]+)', '\\1', data)
                 self.pong(daemon)
             elif 0 == os.fork():
-                print 'trigger handler'
                 handler(data, self)
                 os._exit(os.EX_OK)      # clean up if the handler doesn't
