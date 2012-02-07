@@ -193,6 +193,7 @@ class Irc:
                 break
             except Exception as err:
                 sys.stderr.write('Exception: %s\n' % (err, ))
+            open('logs/raw.log', 'w+').write('%s\n' % (data, ))
             if data.startswith('PING'):
                 daemon = re.sub('^PING :([\\w.]+)', '\\1', data)
                 self.pong(daemon)
