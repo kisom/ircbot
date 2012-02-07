@@ -7,7 +7,9 @@ IRC command support for the bot.
 
 import os
 import re
-from threading import Semaphore
+import socket
+import time
+import threading
 
 IRC_MAXLEN = 4096
 T_TUPLE = type(tuple())
@@ -15,9 +17,12 @@ T_LIST = type(list())
 
 
 class Irc:
-    def __init__(self, sock, server, port, user, channels):
-        self.sock = sock
-        self.slock = Semaphore(1)
+    """
+    Model an IRC connection. 
+    """
+    def __init__(self, server, port, user, channels):
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.slock = threading.Semaphore(1)
         self.server = server
         self.port = port
         self.nick = user['nick']
@@ -27,6 +32,15 @@ class Irc:
         self.username = user['name']
         self.channels = channels
 
+
+    def syncread(self):
+        """
+        Synchronously read the socket using the semaphore.
+        """
+        self.slock.acquire()
+        data = self.sock.recv(IRC_MAXLEN)
+        self.slock.release()
+        return data
 
     def __dosync__(self, fn, *args):
         if not 0 == os.fork():
@@ -73,8 +87,8 @@ class Irc:
         self.sock.recv(4096)        # ignore server message
         time.sleep(5)
         self.sock.send('NICK %s\r\n' % (self.nick, ))
-        user = 'USER %s %s %s %s\r\n' % (self.user, self.myhost, self.sysname,
-                                         self.realname)
+        user = 'USER %s %s %s %s\r\n' % (self.username, self.myhost, 
+                                         self.sysname, self.realname)
         time.sleep(5)
         self.sock.send(user)
 
@@ -86,16 +100,26 @@ class Irc:
         self.sock.setblocking(0)
 
     def null_handler(self, data):
-        return None
+        os._exit(os.EX_OK) 
 
-    def run(self, handler = self.null_handler):
+    def run(self, handler=None):
+        if not handler:
+            handler = self.null_handler
         while True:
-            data = self.sock.recv(IRC_MAXLEN)
+            try:
+                data = self.syncread()
+            except socket.error as err:
+                if not 11 == err.errno:
+                    time.sleep(0.5)     # give the socket time to recover
+                    continue
+                sys.stderr.write('%s\n\t%s\n' % (self, err))
+                break
             if (data.startswith('PING')):
                 daemon = re.sub('^PING :([\\w.]+)', '\\1', data)
                 self.pong(daemon)
             elif 0 == os.fork():
                 handler(data)
+                os._exit(os.EX_OK)      # clean up if the handler doesn't
 
     def __str__(self):
         return '%s:%d %s' % (self.server, self.port, ', '.join(self.channels))
