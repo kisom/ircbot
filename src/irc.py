@@ -35,6 +35,18 @@ class Irc:
     """
     Model an IRC connection.
     """
+    sock = None
+    slock = None
+    server = None
+    port = None
+    nick = None
+    realname = None
+    myhost = None
+    sysname = None
+    username = None
+    channels = None
+
+
     def __init__(self, server, port, user, channels):
         """
         Initialise an IRC connection. Requires a server, a port, a dictionary
@@ -116,6 +128,7 @@ class Irc:
 
     def connect(self):
         """Connect to the server."""
+        self.slock.acquire()
         self.sock.connect((self.server, self.port))
         self.sock.recv(4096)        # ignore server message
         time.sleep(5)
@@ -124,6 +137,7 @@ class Irc:
                                          self.sysname, self.realname)
         time.sleep(5)
         self.sock.send(user)
+        self.slock.release()
 
         for channel in self.channels:
             command = 'JOIN %s\r\n' % (channel, )
