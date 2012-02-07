@@ -8,6 +8,7 @@ IRC command support for the bot.
 import os
 import re
 import socket
+import sys
 import time
 import threading
 
@@ -16,11 +17,30 @@ T_TUPLE = type(tuple())
 T_LIST = type(list())
 
 
+def get_recipient(recipient):
+    """
+    Convert a list of recipients to a proper string.
+    """
+    if type(recipient) == T_TUPLE or type(recipient) == T_LIST:
+        recipient = ','.join(recipient)
+    return recipient
+
+
+def null_handler(data):
+    """Take data and display it."""
+    print data
+
+
 class Irc:
     """
     Model an IRC connection. 
     """
     def __init__(self, server, port, user, channels):
+        """
+        Initialise an IRC connection. Requires a server, a port, a dictionary
+        of user values (name, nick, realname, sysname, and myhost), and a list
+        of channels.
+        """
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.slock = threading.Semaphore(1)
         self.server = server
@@ -32,6 +52,9 @@ class Irc:
         self.username = user['name']
         self.channels = channels
 
+    def __str__(self):
+        """String representation is in the form server:port <channel list>"""
+        return '%s:%d %s' % (self.server, self.port, ', '.join(self.channels))
 
     def syncread(self):
         """
@@ -42,48 +65,53 @@ class Irc:
         self.slock.release()
         return data
 
-    def __dosync__(self, fn, *args):
+    def __dosync__(self, fun, *args):
+        """Apply args to the fn to retrieve a command, then send it on the
+        socket using semaphore locking."""
         if not 0 == os.fork():
             return
 
-        command = fn(args)
+        command = fun(args)
         self.slock.acquire()
         self.sock.send(command)
         self.slock.release()
 
         os._exit(os.EX_OK)
 
-    def get_recipient(self, recipient):
-        if type(recipient) == T_TUPLE or type(recipient) == T_LIST:
-            recipient = ','.join(recipient)
-        return recipient
-
     def msg(self, recipient, message):
+        """Send a privmsg to recipient."""
         self.__dosync__(self.__msg__, recipient, message)
 
     def __msg__(self, recipient, message):
+        """Return an appropriate PRIVMSG command for __dosync__"""
         command = 'PRIVMSG %s :%s\r\n' % (recipient, message)
         return command
 
     def action(self, recipient, message):
-        command = 'ACTION ' + message
-        self.msg(recipient, message)
+        """Send an action to recipient."""
+        command = 'ACTION %s' % (message, )
+        self.msg(recipient, command)
 
     def pong(self, daemon):
+        """Reply to a PING request."""
         self.__dosync__(self.__pong__, daemon)
 
     def __pong__(self, daemon):
+        """Return an appropriate PING command."""
         print '__pong__: ', daemon
         command = 'PONG %s' % (daemon, )
         return command
 
     def quit(self):
+        """Send a quit."""
         self.__dosync__(self.__quit__)
 
     def __quit__(self):
+        """Send a quit command to the server."""
         return 'QUIT'
 
     def connect(self):
+        """Connect to the server."""
         self.sock.connect((self.server, self.port))
         self.sock.recv(4096)        # ignore server message
         time.sleep(5)
@@ -100,12 +128,8 @@ class Irc:
 
         self.sock.setblocking(1)
 
-    def null_handler(self, data):
-        os._exit(os.EX_OK) 
-
-    def run(self, handler=None):
-        if not handler:
-            handler = self.null_handler
+    def run(self, handler=null_handler):
+        """Kick of the run loop. Will run until a socket error crops up."""
         while True:
             try:
                 data = self.syncread()
@@ -128,7 +152,4 @@ class Irc:
             elif 0 == os.fork():
                 handler(data)
                 os._exit(os.EX_OK)      # clean up if the handler doesn't
-
-    def __str__(self):
-        return '%s:%d %s' % (self.server, self.port, ', '.join(self.channels))
 
