@@ -54,6 +54,7 @@ class Irc:
         of channels.
         """
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.setblocking(0)
         self.slock = threading.Semaphore(1)
         self.server = server
         self.port = port
@@ -89,6 +90,18 @@ class Irc:
         self.slock.release()
 
         os._exit(os.EX_OK)
+
+    def connectedp(self):
+        connected = True
+        self.slock.acquire()
+        try:
+            self.sock.getpeername()
+        except socket.error as err:
+            connected = False
+        finally:
+            self.slock.release()
+        return connected
+
 
     def msg(self, recipient, message):
         """Send a privmsg to recipient."""
@@ -129,6 +142,7 @@ class Irc:
     def connect(self):
         """Connect to the server."""
         self.slock.acquire()
+        self.sock.setblocking(1)
         self.sock.connect((self.server, self.port))
         self.sock.recv(4096)        # ignore server message
         time.sleep(5)
@@ -144,7 +158,6 @@ class Irc:
             time.sleep(0.3)
             self.sock.send(command)
 
-        self.sock.setblocking(1)
 
     def run(self, handler=null_handler):
         """Kick of the run loop. Will run until a socket error crops up."""
