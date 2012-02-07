@@ -85,10 +85,22 @@ def init(configfile):
 
 
 def run(servers, handlers):
-    """Daemonise and run IRC connections."""
+    """Run IRC connections."""
 
     print '%d servers loaded...' % (len(servers), )
     assert(len(servers) == len(handlers))
+    for n in range(len(servers)):
+        print 'connecting:', servers[n]
+        server = servers[n]
+        handler = handlers[n]
+        if 0 == os.fork():
+            server.connect()
+            server.run(handler=handler)
+            os._exit(os.EX_IOERR)
+
+
+def main(configfile):
+    """Set up and run the connections."""
     context = daemon.DaemonContext(working_directory=os.getcwd())
     logdir = os.path.join(os.getcwd(), 'logs/')
 
@@ -99,20 +111,8 @@ def run(servers, handlers):
     context.stderr = open(logdir + 'core.err', 'w')
 
     with context:
-        for n in range(len(servers)):
-            print 'connecting:', servers[n]
-            if 0 == os.fork():
-                server = servers[n]
-                handler = handlers[n]
-                server.connect()
-                server.run(handler=handler)
-                os._exit(os.EX_IOERR)
-
-
-def main(configfile):
-    """Set up and run the connections."""
-    servers, handlers = init(configfile)
-    run(servers, handlers)
+        servers, handlers = init(configfile)
+        run(servers, handlers)
 
 
 if '__main__' == __name__:
