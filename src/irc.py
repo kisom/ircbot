@@ -110,6 +110,10 @@ class Irc:
         """Send a quit command to the server."""
         return 'QUIT'
 
+    def raw(self, command):
+        """Allow sending raw IRC commands."""
+        self.__dosync__(lambda : command)
+
     def connect(self):
         """Connect to the server."""
         self.sock.connect((self.server, self.port))
