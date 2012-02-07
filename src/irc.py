@@ -26,7 +26,7 @@ def get_recipient(recipient):
     return recipient
 
 
-def null_handler(data):
+def null_handler(data, conn):
     """Take data and display it."""
     print data
 
@@ -84,7 +84,8 @@ class Irc:
         if not 0 == os.fork():
             return
 
-        command = fun(args)
+        print 'apply args (%s) to fun (%s)' % (args, fun)
+        command = fun(self, args)
         self.slock.acquire()
         self.sock.send(command)
         self.slock.release()
@@ -144,42 +145,61 @@ class Irc:
         self.slock.acquire()
         self.sock.setblocking(1)
         self.sock.connect((self.server, self.port))
-        self.sock.recv(4096)        # ignore server message
+
         time.sleep(5)
         self.sock.send('NICK %s\r\n' % (self.nick, ))
         user = 'USER %s %s %s %s\r\n' % (self.username, self.myhost,
                                          self.sysname, self.realname)
-        time.sleep(5)
+        self.sock.recv(IRC_MAXLEN) 
         self.sock.send(user)
-        self.slock.release()
 
+        time.sleep(1)
+        try:
+            self.sock.settimeout(1)
+            while self.sock.recv(IRC_MAXLEN):
+                time.sleep(0.1)
+        except socket.timeout:
+            pass
+ 
         for channel in self.channels:
             command = 'JOIN %s\r\n' % (channel, )
             time.sleep(0.3)
             self.sock.send(command)
 
+        self.sock.settimeout(None)
+        self.slock.release()
+
+
+    def reconnect(self):
+        """Drop the connection and reconnect."""
+        self.quit()
+        time.sleep(3)
+        self.connect()
+
 
     def run(self, handler=null_handler):
         """Kick of the run loop. Will run until a socket error crops up."""
+        time.sleep(4)
         while True:
             try:
                 data = self.syncread()
-                print data
             except socket.error as err:
+                sys.stderr.write('%s\n\t%s\n' % (self, err))
                 if not 11 == err.errno:
                     time.sleep(0.5)     # give the socket time to recover
                     continue
-                sys.stderr.write('%s\n\t%s\n' % (self, err))
                 break
             except KeyboardInterrupt:
                 self.sock.close()
                 break
             except Exception as err:
                 sys.stderr.write('Exception: %s\n' % (err, ))
+            print data
             if (data.startswith('PING')):
                 print 'top: ping'
                 daemon = re.sub('^PING :([\\w.]+)', '\\1', data)
                 self.pong(daemon)
             elif 0 == os.fork():
-                handler(data)
+                print 'trigger handler'
+                handler(data, self)
                 os._exit(os.EX_OK)      # clean up if the handler doesn't
