@@ -73,6 +73,7 @@ class Irc:
         self.__dosync__(self.__pong__, daemon)
 
     def __pong__(self, daemon):
+        print '__pong__: ', daemon
         command = 'PONG %s' % (daemon, )
         return command
 
@@ -97,7 +98,7 @@ class Irc:
             time.sleep(0.3)
             self.sock.send(command)
 
-        self.sock.setblocking(0)
+        self.sock.setblocking(1)
 
     def null_handler(self, data):
         os._exit(os.EX_OK) 
@@ -108,13 +109,20 @@ class Irc:
         while True:
             try:
                 data = self.syncread()
+                print data
             except socket.error as err:
                 if not 11 == err.errno:
                     time.sleep(0.5)     # give the socket time to recover
                     continue
                 sys.stderr.write('%s\n\t%s\n' % (self, err))
                 break
+            except KeyboardInterrupt:
+                self.sock.close()
+                break
+            except Exception as err:
+                sys.stderr.write('Exception: %s\n' % (err, ))
             if (data.startswith('PING')):
+                print 'top: ping'
                 daemon = re.sub('^PING :([\\w.]+)', '\\1', data)
                 self.pong(daemon)
             elif 0 == os.fork():
