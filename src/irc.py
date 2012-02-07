@@ -33,7 +33,7 @@ def null_handler(data):
 
 class Irc:
     """
-    Model an IRC connection. 
+    Model an IRC connection.
     """
     def __init__(self, server, port, user, channels):
         """
@@ -116,7 +116,7 @@ class Irc:
         self.sock.recv(4096)        # ignore server message
         time.sleep(5)
         self.sock.send('NICK %s\r\n' % (self.nick, ))
-        user = 'USER %s %s %s %s\r\n' % (self.username, self.myhost, 
+        user = 'USER %s %s %s %s\r\n' % (self.username, self.myhost,
                                          self.sysname, self.realname)
         time.sleep(5)
         self.sock.send(user)
@@ -152,4 +152,3 @@ class Irc:
             elif 0 == os.fork():
                 handler(data)
                 os._exit(os.EX_OK)      # clean up if the handler doesn't
-
