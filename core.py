@@ -11,8 +11,8 @@ import imp
 import os
 import sys
 
-import config
-import irc
+from src import config
+from src import irc
 
 
 DEFAULT_CONFIG = 'config.json'
@@ -30,9 +30,9 @@ def valid_userp(user):
 
 def setup_connection(server, user):
     """Set up an IRC connection."""
-    host = server.keys()[0]
-    port = server[host]['port']
-    channels = server[host]['channels']
+    host = server['host']
+    port = server['port']
+    channels = server['channels']
 
     assert(not host == None)
     assert(not port == None)
@@ -87,18 +87,20 @@ def init(configfile):
 def run(servers, handlers):
     """Daemonise and run IRC connections."""
 
+    print '%d servers loaded...' % (len(servers), )
     assert(len(servers) == len(handlers))
-
     context = daemon.DaemonContext(working_directory=os.getcwd())
-    logdir = 'logs/'
-    context.stdout = open(os.getcwd() + logdir + 'core.log', 'w')
-    context.stderr = open(os.getcwd() + logdir + 'core.err', 'w')
+    logdir = os.path.join(os.getcwd(), 'logs/')
 
     if not os.path.exists(logdir):
         os.makedirs(logdir)
 
+    context.stdout = open(logdir + 'core.log', 'w')
+    context.stderr = open(logdir + 'core.err', 'w')
+
     with context:
         for n in range(len(servers)):
+            print 'connecting:', servers[n]
             if 0 == os.fork():
                 server = servers[n]
                 handler = handlers[n]
@@ -113,7 +115,7 @@ def main(configfile):
     run(servers, handlers)
 
 
-if '__name__' == __name__:
+if '__main__' == __name__:
     if len(sys.argv) > 1:
         main(sys.argv[1])
     else:
