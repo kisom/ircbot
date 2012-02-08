@@ -198,10 +198,10 @@ class Irc:
                 daemon = re.sub('^PING :([\\w.]+)', '\\1', data)
                 self.pong(daemon)
             else:
-                while not self.__handler(data):
+                while not self.__handler(handler, data):
                     pass
 
-    def __handler(self, data):
+    def __handler(self, handler, data):
         """
         Run the handler
         """
