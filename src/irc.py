@@ -197,6 +197,21 @@ class Irc:
             if data.startswith('PING'):
                 daemon = re.sub('^PING :([\\w.]+)', '\\1', data)
                 self.pong(daemon)
-            elif 0 == os.fork():
-                handler(data, self)
-                os._exit(os.EX_OK)      # clean up if the handler doesn't
+            else:
+                while not self.__handler(data):
+                    pass
+
+    def __handler(self, data):
+        """
+        Run the handler
+        """
+        try:
+            if not 0 == os.fork():
+                return True
+            handler(data, self)
+            os._exit(os.EX_OK)
+        except OSError as err:
+            return False
+        else:
+            return False
+        
