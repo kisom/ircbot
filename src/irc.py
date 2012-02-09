@@ -74,9 +74,13 @@ class Irc:
         Synchronously read the socket using the semaphore.
         """
         self.slock.acquire()
-        data = self.sock.recv(IRC_MAXLEN)
-        self.slock.release()
-        return data
+        try:
+            data = self.sock.recv(IRC_MAXLEN)
+        except socket.error as error:
+            data = None
+        finally:
+            self.slock.release()
+            return data
 
     def __dosync__(self, fun, *args):
         """Apply args to the fn to retrieve a command, then send it on the
@@ -86,10 +90,13 @@ class Irc:
 
         command = fun(*args)
         self.slock.acquire()
-        self.sock.send(command)
-        self.slock.release()
-
-        os._exit(os.EX_OK)
+        try:
+            self.sock.send(command)
+        except Exception as error:
+            sys.stderr.write('dosync exception: %s\n' % (error, ))
+        finally:
+            self.slock.release()
+            os._exit(os.EX_OK)
 
     def connectedp(self):
         connected = True
@@ -177,6 +184,9 @@ class Irc:
 
     def run(self, handler=null_handler):
         """Kick of the run loop. Will run until a socket error crops up."""
+        if not self.connectedp():
+            os._exit(os.EX_IOERR)
+            
         while True:
             sys.stdout.flush()
             sys.stderr.flush()
@@ -198,8 +208,12 @@ class Irc:
                 daemon = re.sub('^PING :([\\w.]+)', '\\1', data)
                 self.pong(daemon)
             else:
-                while not self.__handler(handler, data):
-                    pass
+                error_count = 0
+                while error_count < 50 and not self.__handler(handler, data):
+                    error_count += 1
+                    time.sleep(0.1)
+                if error_count < 50:
+                    exit(os.EX_OSERR)
 
     def __handler(self, handler, data):
         """
@@ -211,6 +225,7 @@ class Irc:
             handler(data, self)
             os._exit(os.EX_OK)
         except OSError as err:
+            if 11 == errno
             return False
         else:
             return False
