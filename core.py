@@ -97,7 +97,16 @@ def run(servers, handlers):
             server.connect()
             server.run(handler=handler)
             os._exit(os.EX_IOERR)
-
+    while True:
+        try:
+            pid = os.wait()
+            print 'child %d exited with status %d' % pid
+        except OSError as error:
+            if error.errno == 10:
+                print 'no children left.'
+            break
+    print 'finished.'
+    
 
 def main(configfile):
     """Set up and run the connections."""
