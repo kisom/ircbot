@@ -52,6 +52,9 @@ def main(data, conn):
         message = re.sub(MSGRE, r'\1', data).strip()
         server = conn.server
 
+        if channel == conn.nick:
+            channel = sender
+
         if 0 == os.fork():
             log_message(server, channel, sender, message)
             os._exit(os.EX_OK)
